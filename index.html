@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced To-Do List</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-check-circle"></i>
+                <span>TaskManager</span>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-item active" data-view="today">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>Today</span>
+                    <span class="count" id="today-count">0</span>
+                </div>
+                <div class="nav-item" data-view="next7days">
+                    <i class="fas fa-calendar-week"></i>
+                    <span>Next 7 Days</span>
+                    <span class="count" id="next7-count">0</span>
+                </div>
+                <div class="nav-item" data-view="inbox">
+                    <i class="fas fa-inbox"></i>
+                    <span>Inbox</span>
+                    <span class="count" id="inbox-count">0</span>
+                </div>
+            </div>
+
+            <div class="lists-section">
+                <h4>Lists</h4>
+                <div class="nav-item" data-view="work">
+                    <i class="fas fa-briefcase" style="color: #ff6b6b;"></i>
+                    <span>Work Tasks</span>
+                    <span class="count" id="work-count">0</span>
+                </div>
+                <div class="nav-item" data-view="study">
+                    <i class="fas fa-graduation-cap" style="color: #4ecdc4;"></i>
+                    <span>Study Goals</span>
+                    <span class="count" id="study-count">0</span>
+                </div>
+                <div class="nav-item" data-view="travel">
+                    <i class="fas fa-plane" style="color: #45b7d1;"></i>
+                    <span>Travel Plans</span>
+                    <span class="count" id="travel-count">0</span>
+                </div>
+                <div class="nav-item" data-view="daily">
+                    <i class="fas fa-list" style="color: #96ceb4;"></i>
+                    <span>Daily To-Dos</span>
+                    <span class="count" id="daily-count">0</span>
+                </div>
+                <div class="nav-item" data-view="life">
+                    <i class="fas fa-heart" style="color: #feca57;"></i>
+                    <span>Life Errands</span>
+                    <span class="count" id="life-count">0</span>
+                </div>
+            </div>
+
+            <div class="filters-section">
+                <h4>Filters</h4>
+                <div class="nav-item" data-view="thisweek">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>This Week</span>
+                    <span class="count" id="week-count">0</span>
+                </div>
+                <div class="nav-item" data-view="unscheduled">
+                    <i class="fas fa-clock"></i>
+                    <span>Unscheduled</span>
+                    <span class="count" id="unscheduled-count">0</span>
+                </div>
+                <div class="nav-item" data-view="completed">
+                    <i class="fas fa-check"></i>
+                    <span>Completed</span>
+                    <span class="count" id="completed-count">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="main-header">
+                <h1 id="main-title">Next 7 Days</h1>
+                <div class="header-actions">
+                    <button class="sort-btn"><i class="fas fa-sort"></i></button>
+                    <button class="more-btn"><i class="fas fa-ellipsis-h"></i></button>
+                </div>
+            </div>
+
+            <div class="add-task-section">
+                <input type="text" id="task-input" placeholder="+ Add Task">
+            </div>
+
+            <div class="task-groups" id="task-groups">
+                <!-- Task groups will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Details Panel -->
+        <div class="details-panel" id="details-panel">
+            <div class="panel-header">
+                <h3 id="detail-title">Select a task</h3>
+                <button class="close-panel" id="close-panel"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="panel-content" id="panel-content">
+                <p>Select a task to view details</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
