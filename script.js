@@ -1,13 +1,16 @@
 class TodoApp {
     constructor() {
         this.tasks = this.loadTasks();
-        this.currentView = 'next7days';
+        this.currentView = 'today';
         this.selectedTask = null;
+        this.currentDate = new Date();
+        this.selectedCalendarDate = null;
         this.init();
     }
 
     init() {
         this.bindEvents();
+        this.loadTheme();
         this.renderTasks();
         this.updateCounts();
     }
@@ -33,6 +36,58 @@ class TodoApp {
         document.getElementById('close-panel').addEventListener('click', () => {
             this.closeDetailsPanel();
         });
+
+        // Theme toggle
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            this.toggleTheme();
+        });
+
+        // Calendar events
+        document.getElementById('calendar-toggle').addEventListener('click', () => {
+            this.openCalendar();
+        });
+
+        document.getElementById('close-calendar').addEventListener('click', () => {
+            this.closeCalendar();
+        });
+
+        document.getElementById('prev-month').addEventListener('click', () => {
+            this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+            this.renderCalendar();
+        });
+
+        document.getElementById('next-month').addEventListener('click', () => {
+            this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+            this.renderCalendar();
+        });
+
+        // Day tasks modal events
+        document.getElementById('close-day-tasks').addEventListener('click', () => {
+            this.closeDayTasks();
+        });
+
+        document.getElementById('add-day-task').addEventListener('click', () => {
+            this.addDayTask();
+        });
+
+        document.getElementById('day-task-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.addDayTask();
+            }
+        });
+
+        // Close modals when clicking outside
+        document.getElementById('calendar-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'calendar-modal') {
+                this.closeCalendar();
+            }
+        });
+
+        document.getElementById('day-tasks-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'day-tasks-modal') {
+                this.closeDayTasks();
+            }
+        });
     }
 
     loadTasks() {
@@ -42,6 +97,19 @@ class TodoApp {
 
     saveTasks() {
         localStorage.setItem('todoTasks', JSON.stringify(this.tasks));
+    }
+
+    loadTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+        }
+    }
+
+    toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
     }
 
     getDefaultTasks() {
@@ -57,7 +125,8 @@ class TodoApp {
                 category: 'daily',
                 time: '07:00',
                 date: today.toISOString().split('T')[0],
-                subtasks: []
+                subtasks: [],
+                recurring: 'daily'
             },
             {
                 id: 2,
@@ -111,7 +180,8 @@ class TodoApp {
             category: this.getCategoryFromView(),
             time: '',
             date: this.getDateFromView(),
-            subtasks: []
+            subtasks: [],
+            recurring: this.currentView === 'daily' ? 'daily' : null
         };
 
         this.tasks.push(newTask);
@@ -161,6 +231,32 @@ class TodoApp {
         this.renderTasks();
     }
 
+    getTasksForDate(dateStr) {
+        const normalTasks = this.tasks.filter(task => task.date === dateStr);
+        const dailyTasks = this.tasks.filter(task => task.recurring === 'daily');
+        
+        // Create instances of daily tasks for this date
+        const dailyInstances = dailyTasks.map(task => ({
+            ...task,
+            id: `${task.id}-${dateStr}`,
+            date: dateStr,
+            completed: this.isDailyTaskCompletedForDate(task.id, dateStr)
+        }));
+
+        return [...normalTasks, ...dailyInstances];
+    }
+
+    isDailyTaskCompletedForDate(taskId, dateStr) {
+        const completedDaily = JSON.parse(localStorage.getItem('completedDailyTasks') || '{}');
+        return completedDaily[`${taskId}-${dateStr}`] || false;
+    }
+
+    setDailyTaskCompletedForDate(taskId, dateStr, completed) {
+        const completedDaily = JSON.parse(localStorage.getItem('completedDailyTasks') || '{}');
+        completedDaily[`${taskId}-${dateStr}`] = completed;
+        localStorage.setItem('completedDailyTasks', JSON.stringify(completedDaily));
+    }
+
     renderTasks() {
         const container = document.getElementById('task-groups');
         const filteredTasks = this.getFilteredTasks();
@@ -199,12 +295,17 @@ class TodoApp {
 
         switch (this.currentView) {
             case 'today':
-                return this.tasks.filter(task => task.date === today && !task.completed);
+                return this.getTasksForDate(today).filter(task => !task.completed);
             case 'next7days':
-                return this.tasks.filter(task => {
-                    const taskDate = new Date(task.date);
-                    return taskDate >= todayDate && taskDate <= next7Date && !task.completed;
-                });
+                const next7Tasks = [];
+                for (let i = 0; i <= 7; i++) {
+                    const date = new Date(todayDate);
+                    date.setDate(date.getDate() + i);
+                    const dateStr = date.toISOString().split('T')[0];
+                    const dayTasks = this.getTasksForDate(dateStr).filter(task => !task.completed);
+                    next7Tasks.push(...dayTasks);
+                }
+                return next7Tasks;
             case 'completed':
                 return this.tasks.filter(task => task.completed);
             case 'unscheduled':
@@ -214,6 +315,10 @@ class TodoApp {
             case 'travel':
             case 'daily':
             case 'life':
+                if (this.currentView === 'daily') {
+                    // Show all daily recurring tasks
+                    return this.tasks.filter(task => task.recurring === 'daily');
+                }
                 return this.tasks.filter(task => task.category === this.currentView && !task.completed);
             default:
                 return this.tasks.filter(task => !task.completed);
@@ -229,7 +334,9 @@ class TodoApp {
 
         tasks.forEach(task => {
             let groupKey;
-            if (task.date === today) {
+            if (this.currentView === 'daily') {
+                groupKey = 'Daily Recurring Tasks';
+            } else if (task.date === today) {
                 groupKey = 'Today';
             } else if (task.date === tomorrowStr) {
                 groupKey = 'Tomorrow';
@@ -260,6 +367,7 @@ class TodoApp {
                 <div class="task-meta">
                     ${task.time ? `<span class="task-time">${task.time}</span>` : ''}
                     <span class="task-category">${task.category}</span>
+                    ${task.recurring ? '<span class="task-category" style="background: #96ceb4;">Daily</span>' : ''}
                 </div>
             </div>
             <div class="task-actions">
@@ -270,7 +378,14 @@ class TodoApp {
 
         // Bind events
         taskDiv.querySelector('.task-checkbox').addEventListener('change', (e) => {
-            this.toggleTask(task.id, e.target.checked);
+            if (task.recurring === 'daily' && typeof task.id === 'string' && task.id.includes('-')) {
+                // This is a daily task instance
+                const [originalId, dateStr] = task.id.split('-');
+                this.setDailyTaskCompletedForDate(parseInt(originalId), dateStr, e.target.checked);
+                this.renderTasks();
+            } else {
+                this.toggleTask(task.id, e.target.checked);
+            }
         });
 
         taskDiv.querySelector('.delete-btn').addEventListener('click', (e) => {
@@ -332,6 +447,13 @@ class TodoApp {
                     <option value="life" ${task.category === 'life' ? 'selected' : ''}>Life</option>
                 </select>
             </div>
+            <div class="task-detail">
+                <h4>Recurring</h4>
+                <select class="detail-input" id="detail-recurring">
+                    <option value="">None</option>
+                    <option value="daily" ${task.recurring === 'daily' ? 'selected' : ''}>Daily</option>
+                </select>
+            </div>
             <div class="subtasks">
                 <h4>Subtasks</h4>
                 <div id="subtasks-list">
@@ -376,6 +498,15 @@ class TodoApp {
             }
         });
 
+        document.getElementById('detail-recurring').addEventListener('change', (e) => {
+            if (this.selectedTask) {
+                this.selectedTask.recurring = e.target.value || null;
+                this.saveTasks();
+                this.renderTasks();
+                this.updateCounts();
+            }
+        });
+
         document.getElementById('add-subtask').addEventListener('click', () => {
             const text = prompt('Enter subtask:');
             if (text && this.selectedTask) {
@@ -407,6 +538,143 @@ class TodoApp {
         document.getElementById('panel-content').innerHTML = '<p>Select a task to view details</p>';
     }
 
+    // Calendar Methods
+    openCalendar() {
+        document.getElementById('calendar-modal').classList.add('open');
+        this.renderCalendar();
+    }
+
+    closeCalendar() {
+        document.getElementById('calendar-modal').classList.remove('open');
+    }
+
+    renderCalendar() {
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        document.getElementById('calendar-month-year').textContent = 
+            `${monthNames[this.currentDate.getMonth()]} ${this.currentDate.getFullYear()}`;
+
+        const firstDay = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1);
+        const lastDay = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 0);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+        const grid = document.getElementById('calendar-grid');
+        grid.innerHTML = '';
+
+        const today = new Date().toDateString();
+
+        for (let i = 0; i < 42; i++) {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + i);
+            const dateStr = date.toISOString().split('T')[0];
+
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-day';
+            
+            if (date.getMonth() !== this.currentDate.getMonth()) {
+                dayElement.classList.add('other-month');
+            }
+            
+            if (date.toDateString() === today) {
+                dayElement.classList.add('today');
+            }
+
+            const dayTasks = this.getTasksForDate(dateStr).filter(task => !task.completed);
+            
+            dayElement.innerHTML = `
+                <div class="day-number">${date.getDate()}</div>
+                <div class="day-tasks">
+                    ${dayTasks.slice(0, 3).map(task => 
+                        `<div class="day-task ${task.category}">${task.text}</div>`
+                    ).join('')}
+                    ${dayTasks.length > 3 ? `<div class="day-task">+${dayTasks.length - 3} more</div>` : ''}
+                </div>
+            `;
+
+            dayElement.addEventListener('click', () => {
+                this.openDayTasks(dateStr);
+            });
+
+            grid.appendChild(dayElement);
+        }
+    }
+
+    openDayTasks(dateStr) {
+        this.selectedCalendarDate = dateStr;
+        const date = new Date(dateStr);
+        document.getElementById('day-tasks-title').textContent = 
+            `Tasks for ${date.toLocaleDateString()}`;
+        
+        this.renderDayTasks();
+        document.getElementById('day-tasks-modal').classList.add('open');
+    }
+
+    closeDayTasks() {
+        document.getElementById('day-tasks-modal').classList.remove('open');
+        this.selectedCalendarDate = null;
+    }
+
+    renderDayTasks() {
+        if (!this.selectedCalendarDate) return;
+
+        const dayTasks = this.getTasksForDate(this.selectedCalendarDate);
+        const list = document.getElementById('day-tasks-list');
+        
+        list.innerHTML = dayTasks.map(task => `
+            <div class="day-task-item ${task.completed ? 'completed' : ''}">
+                <input type="checkbox" ${task.completed ? 'checked' : ''} 
+                       onchange="app.toggleDayTask('${task.id}', this.checked)">
+                <span>${task.text} ${task.time ? `(${task.time})` : ''}</span>
+            </div>
+        `).join('');
+    }
+
+    toggleDayTask(taskId, completed) {
+        if (typeof taskId === 'string' && taskId.includes('-')) {
+            // Daily task instance
+            const [originalId, dateStr] = taskId.split('-');
+            this.setDailyTaskCompletedForDate(parseInt(originalId), dateStr, completed);
+        } else {
+            // Regular task
+            const task = this.tasks.find(t => t.id === taskId);
+            if (task) {
+                task.completed = completed;
+                this.saveTasks();
+            }
+        }
+        this.renderDayTasks();
+        this.renderCalendar();
+        this.renderTasks();
+        this.updateCounts();
+    }
+
+    addDayTask() {
+        const input = document.getElementById('day-task-input');
+        const text = input.value.trim();
+        
+        if (!text || !this.selectedCalendarDate) return;
+
+        const newTask = {
+            id: Date.now(),
+            text: text,
+            completed: false,
+            category: 'daily',
+            time: '',
+            date: this.selectedCalendarDate,
+            subtasks: []
+        };
+
+        this.tasks.push(newTask);
+        this.saveTasks();
+        input.value = '';
+        
+        this.renderDayTasks();
+        this.renderCalendar();
+        this.updateCounts();
+    }
+
     updateCounts() {
         const today = new Date().toISOString().split('T')[0];
         const todayDate = new Date();
@@ -414,21 +682,30 @@ class TodoApp {
         next7Date.setDate(todayDate.getDate() + 7);
 
         // Today count
-        const todayCount = this.tasks.filter(t => t.date === today && !t.completed).length;
+        const todayTasks = this.getTasksForDate(today);
+        const todayCount = todayTasks.filter(t => !t.completed).length;
         document.getElementById('today-count').textContent = todayCount;
 
         // Next 7 days count
-        const next7Count = this.tasks.filter(t => {
-            const taskDate = new Date(t.date);
-            return taskDate >= todayDate && taskDate <= next7Date && !t.completed;
-        }).length;
+        let next7Count = 0;
+        for (let i = 0; i <= 7; i++) {
+            const date = new Date(todayDate);
+            date.setDate(date.getDate() + i);
+            const dateStr = date.toISOString().split('T')[0];
+            const dayTasks = this.getTasksForDate(dateStr);
+            next7Count += dayTasks.filter(t => !t.completed).length;
+        }
         document.getElementById('next7-count').textContent = next7Count;
 
         // Category counts
-        ['work', 'study', 'travel', 'daily', 'life'].forEach(category => {
+        ['work', 'study', 'travel', 'life'].forEach(category => {
             const count = this.tasks.filter(t => t.category === category && !t.completed).length;
             document.getElementById(`${category}-count`).textContent = count;
         });
+
+        // Daily count (recurring tasks)
+        const dailyCount = this.tasks.filter(t => t.recurring === 'daily').length;
+        document.getElementById('daily-count').textContent = dailyCount;
 
         // Other counts
         document.getElementById('inbox-count').textContent = this.tasks.filter(t => !t.category && !t.completed).length;
@@ -439,6 +716,7 @@ class TodoApp {
 }
 
 // Initialize the app
+let app;
 document.addEventListener('DOMContentLoaded', () => {
-    new TodoApp();
+    app = new TodoApp();
 });
