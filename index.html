@@ -14,6 +14,11 @@
             <div class="logo">
                 <i class="fas fa-check-circle"></i>
                 <span>TaskManager</span>
+                <div class="theme-toggle" id="theme-toggle" title="Toggle dark/light mode">
+                    <div class="bulb-container">
+                        <div class="bulb">💡</div>
+                    </div>
+                </div>
             </div>
             
             <div class="nav-section">
@@ -86,8 +91,11 @@
         <!-- Main Content -->
         <div class="main-content">
             <div class="main-header">
-                <h1 id="main-title">Next 7 Days</h1>
+                <h1 id="main-title">Today</h1>
                 <div class="header-actions">
+                    <button class="calendar-btn" id="calendar-toggle" title="Open Calendar">
+                        <i class="fas fa-calendar"></i>
+                    </button>
                     <button class="sort-btn"><i class="fas fa-sort"></i></button>
                     <button class="more-btn"><i class="fas fa-ellipsis-h"></i></button>
                 </div>
@@ -110,6 +118,47 @@
             </div>
             <div class="panel-content" id="panel-content">
                 <p>Select a task to view details</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Modal -->
+    <div class="calendar-modal" id="calendar-modal">
+        <div class="calendar-content">
+            <div class="calendar-header">
+                <button class="calendar-nav" id="prev-month"><i class="fas fa-chevron-left"></i></button>
+                <h2 id="calendar-month-year"></h2>
+                <button class="calendar-nav" id="next-month"><i class="fas fa-chevron-right"></i></button>
+                <button class="close-calendar" id="close-calendar"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="calendar-weekdays">
+                <div class="weekday">Sun</div>
+                <div class="weekday">Mon</div>
+                <div class="weekday">Tue</div>
+                <div class="weekday">Wed</div>
+                <div class="weekday">Thu</div>
+                <div class="weekday">Fri</div>
+                <div class="weekday">Sat</div>
+            </div>
+            <div class="calendar-grid" id="calendar-grid">
+                <!-- Calendar days will be generated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Tasks Modal -->
+    <div class="day-tasks-modal" id="day-tasks-modal">
+        <div class="day-tasks-content">
+            <div class="day-tasks-header">
+                <h3 id="day-tasks-title">Tasks for Day</h3>
+                <button class="close-day-tasks" id="close-day-tasks"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="day-task-input">
+                <input type="text" id="day-task-input" placeholder="Add task for this day...">
+                <button id="add-day-task">Add</button>
+            </div>
+            <div class="day-tasks-list" id="day-tasks-list">
+                <!-- Day tasks will be rendered here -->
             </div>
         </div>
     </div>
